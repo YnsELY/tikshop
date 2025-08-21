@@ -342,6 +342,93 @@ export const CheckoutForm: React.FC = () => {
     }
   };
 
+  // Fonction pour créer un nouveau prix actif pour un produit du panier
+  const createNewActivePriceForCartItem = async (product: any): Promise<string | null> => {
+    try {
+      console.log('🚀 Création d\'un nouveau prix actif pour le produit du panier:', product.name);
+      
+      // 1. Chercher le produit Stripe correspondant
+      const searchParams = new URLSearchParams({
+        query: `metadata['reference']:'${product.reference}'`,
+        limit: '1',
+      });
+      
+      const searchResponse = await fetch(`https://api.stripe.com/v1/products/search?${searchParams}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+        },
+      });
+      
+      const searchData = await searchResponse.json();
+      
+      if (!searchResponse.ok || searchData.data.length === 0) {
+        console.error('❌ Produit Stripe non trouvé pour créer un nouveau prix');
+        return null;
+      }
+      
+      const stripeProductId = searchData.data[0].id;
+      console.log('✅ Produit Stripe trouvé:', stripeProductId);
+      
+      // 2. Créer un nouveau prix actif
+      const priceAmount = Math.round(product.price * 100); // Convertir en centimes
+      
+      const priceFormData = new URLSearchParams({
+        product: stripeProductId,
+        unit_amount: priceAmount.toString(),
+        currency: 'eur',
+        active: 'true',
+        'metadata[reference]': product.reference,
+        'metadata[supabase_product_id]': product.id,
+        'metadata[created_reason]': 'inactive_price_replacement_cart',
+      });
+      
+      console.log('📤 Création du nouveau prix actif pour le panier...');
+      const priceResponse = await fetch('https://api.stripe.com/v1/prices', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: priceFormData,
+      });
+      
+      const newPriceData = await priceResponse.json();
+      
+      if (!priceResponse.ok) {
+        console.error('❌ Erreur création nouveau prix pour le panier:', newPriceData);
+        return null;
+      }
+      
+      console.log('✅ Nouveau prix actif créé pour le panier:', {
+        id: newPriceData.id,
+        active: newPriceData.active,
+        unit_amount: newPriceData.unit_amount
+      });
+      
+      // 3. Mettre à jour la base de données avec le nouveau Price ID
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          stripe_price_id: newPriceData.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', product.id);
+      
+      if (updateError) {
+        console.error('❌ Erreur mise à jour Price ID en base pour le panier:', updateError);
+        // Ne pas bloquer le paiement même si la mise à jour échoue
+      } else {
+        console.log('✅ Nouveau Price ID sauvegardé en base pour le panier:', newPriceData.id);
+      }
+      
+      return newPriceData.id;
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du nouveau prix actif pour le panier:', error);
+      return null;
+    }
+  };
+
   const handleClassicOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     
