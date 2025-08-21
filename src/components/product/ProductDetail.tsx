@@ -14,6 +14,7 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { MondialRelayWidget } from '../mondialrelay/MondialRelayWidget';
 import { AuthModal } from '../auth/AuthModal';
+import { sessionWatchdog } from '../../lib/sessionWatchdog';
 
 interface ProductDetailProps {
   productId?: string;
