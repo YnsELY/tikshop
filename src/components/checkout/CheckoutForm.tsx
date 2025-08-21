@@ -138,11 +138,6 @@ export const CheckoutForm: React.FC = () => {
 
   const handleMultiProductStripeCheckout = async () => {
     console.log('🚀 handleMultiProductStripeCheckout called from CheckoutForm');
-    console.log('🔍 User authenticated:', !!user);
-    console.log('🔍 Items in cart:', items.length);
-    console.log('🔍 Stripe compatible items:', stripeCompatibleItems.length);
-    console.log('🔍 Relay point selected:', !!relayPoint);
-    console.log('🔍 Form data complete:', !!(formData.first_name && formData.last_name && formData.email));
     
     if (!user) {
       toast.error('Veuillez vous connecter pour continuer');
@@ -164,20 +159,12 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
 
-    if (!formData.first_name || !formData.last_name || !formData.email) {
-      console.log('🔄 Stripe payment processing started');
-      return;
-    }
 
     try {
-      console.log('🎯 Starting multi-product Stripe checkout...');
-      console.log('📦 Stripe compatible items:', stripeCompatibleItems.length);
-        
       // Créer les line items pour Stripe
       const lineItems = stripeCompatibleItems.map(item => {
         // Vérifier d'abord si le produit a un stripe_price_id (produits synchronisés)
         if (item.product.stripe_price_id) {
-          console.log('✅ Using synced Stripe price ID:', item.product.stripe_price_id);
           return {
             price: item.product.stripe_price_id,
             quantity: item.quantity,
@@ -196,25 +183,15 @@ export const CheckoutForm: React.FC = () => {
         }
         
         if (stripeProduct) {
-          console.log('✅ Found static Stripe product:', stripeProduct.name, 'Price ID:', stripeProduct.priceId);
           return {
             price: stripeProduct.priceId,
             quantity: item.quantity,
           };
         }
         
-        console.error('❌ Stripe product not found for:', {
-          name: item.product.name,
-          reference: item.product.reference,
-          id: item.product.id,
-          hasStripePriceId: !!item.product.stripe_price_id
-        });
         throw new Error(`Produit Stripe non trouvé: ${item.product.name}`);
       });
 
-      console.log('📦 Line items created:', lineItems.length, 'items');
-      console.log('📋 Line items details:', lineItems);
-      
       // Préparer les métadonnées pour le webhook
       const metadata = {
         cart_checkout: 'true',
@@ -242,102 +219,21 @@ export const CheckoutForm: React.FC = () => {
         relay_point_postal_code: relayPoint?.postalCode || '',
       };
 
-      console.log('📋 Metadata prepared:', metadata);
-      
-      // Appeler l'edge function multi-produits
-      console.log('🔐 Getting authentication session...');
-      const { data: { session }, error: tokenError } = await supabase.auth.getSession();
-      
-      if (tokenError || !session?.access_token) {
-        console.error('❌ Authentication error:', tokenError);
-        
-        // Essayer de rafraîchir la session
-        console.log('🔄 Trying to refresh session...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError || !refreshData.session) {
-          console.error('❌ Session refresh failed:', refreshError);
-          throw new Error('Session expirée. Veuillez vous reconnecter.');
-        }
-        
-        console.log('✅ Session refreshed, retrying...');
-      }
 
-      console.log('✅ Valid session found');
-      console.log('📡 Calling stripe-checkout-multi function...');
-      
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout-multi`;
-      console.log('🔗 API URL:', apiUrl);
-      
-      const requestBody = {
-        line_items: lineItems,
+      // Utiliser la nouvelle fonction du hook
+      await createMultiProductCheckoutSession({
+        lineItems,
         mode: 'payment',
         success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: window.location.href,
-        metadata: metadata
-      };
-      
-      console.log('📤 Request body:', requestBody);
-      
-      console.log('📡 Sending request to Stripe function...');
-      const currentSession = session || refreshData?.session;
-      if (!currentSession?.access_token) {
-        throw new Error('Token d\'accès manquant après rafraîchissement');
-      }
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentSession.access_token}`,
-        },
-        body: JSON.stringify(requestBody),
+        metadata
       });
 
-      console.log('📥 Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Stripe checkout error response:', errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: errorText };
-        }
-        
-        throw new Error(errorData.error || `Erreur ${response.status}: ${errorText}`);
-      }
 
-      const responseText = await response.text();
-      console.log('📥 Raw response:', responseText);
-      
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('❌ Failed to parse response JSON:', parseError);
-        throw new Error('Réponse invalide du serveur');
-      }
-
-      console.log('📥 Parsed response data:', responseData);
-      
-      if (responseData.url) {
-        const url = responseData.url;
-        console.log('🔗 Stripe checkout URL:', url);
-        
-        // Rediriger vers Stripe
-        console.log('🎯 Redirecting to Stripe checkout...');
-        toast.success('Redirection vers le paiement...');
-        window.location.href = url;
-      } else {
-        throw new Error('URL de checkout manquante');
-      }
     } catch (error) {
       console.error('❌ Stripe checkout failed:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors du paiement Stripe');
     } finally {
-      console.log('🔄 Resetting payment processing state');
       setIsProcessing(false);
     }
   };

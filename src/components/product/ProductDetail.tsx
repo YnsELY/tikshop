@@ -280,72 +280,38 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
 
   const handleStripeCheckout = async () => {
     console.log('🚀 handleStripeCheckout called');
-    console.log('🔍 Current loading states:', { isStripeLoading, isProcessing });
     
-    // Protection contre les appels multiples
-    if (isStripeLoading || isProcessing) {
-      console.log('⚠️ Already processing, ignoring duplicate call');
+    if (isStripeLoading) {
       return;
     }
     
-    console.log('👤 User:', !!user);
-    console.log('🎯 Stripe product found:', !!stripeProduct);
-    if (stripeProduct) {
-      console.log('💳 Stripe product details:', {
-        name: stripeProduct.name,
-        priceId: stripeProduct.priceId,
-        price: stripeProduct.price,
-        mode: stripeProduct.mode
-      });
-    }
-    console.log('🎨 Selected variant:', selectedVariant);
-    console.log('📍 Relay point:', relayPoint);
-    
     if (!user) {
-      console.log('❌ No user, showing auth modal');
       setPendingStripeAction('checkout');
       setShowAuthModal(true);
       return;
     }
 
     if (!stripeProduct) {
-      console.log('❌ No Stripe product found');
-      console.log('🔍 Product details for debugging:', {
-        id: product.id,
-        reference: product.reference,
-        name: product.name,
-        stripe_price_id: product.stripe_price_id
-      });
       toast.error('Ce produit n\'est pas disponible pour le paiement Stripe');
       return;
     }
 
-    if (!selectedVariant) {
-      console.log('❌ No variant selected');
-      toast.error('Veuillez sélectionner une couleur et une taille');
-      return;
-    }
-
-    if (selectedVariant.stock === 0) {
-      console.log('❌ Out of stock');
-      toast.error('Ce produit n\'est plus en stock');
-      return;
-    }
-
-    if (quantity > selectedVariant.stock) {
+      const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = window.location.href;
+      
       await createCheckoutSession({
         priceId: stripeProduct.priceId,
         mode: stripeProduct.mode,
         successUrl,
         cancelUrl,
-        quantity: quantity,
+        quantity,
         metadata: {
           product_id: product.id,
           product_reference: product.reference,
           variant_color: selectedVariant.color,
           variant_size: selectedVariant.size,
           variant_id: selectedVariant.id,
-          shipping_amount: "5.00",
+          shipping_amount: shippingPrice.toFixed(2),
           // Informations de livraison pour le webhook
           shipping_first_name: formData.first_name,
           shipping_last_name: formData.last_name,
@@ -354,6 +320,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
           shipping_city: formData.city,
           shipping_postal_code: formData.postal_code,
           shipping_country: formData.country,
+          shipping_email: formData.email,
           // Informations du point relais
           relay_point_id: relayPoint?.id || '',
           relay_point_name: relayPoint?.name || '',
@@ -362,27 +329,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
           relay_point_postal_code: relayPoint?.postalCode || '',
         }
       });
-      
-      console.log('✅ Checkout session creation initiated');
     } catch (error) {
       console.error('Stripe checkout error:', error);
-      
-      // Gestion d'erreur détaillée
-      let errorMessage = 'Erreur lors du paiement Stripe';
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage);
-    } finally {
-      // S'assurer que l'état de chargement est réinitialisé
-      console.log('🔄 Resetting loading state in finally block');
-      // Note: isStripeLoading est géré par le hook useStripeCheckout
+      toast.error(error instanceof Error ? error.message : 'Erreur lors du paiement Stripe');
     }
   };
 
