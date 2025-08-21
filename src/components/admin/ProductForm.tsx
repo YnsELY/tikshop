@@ -266,6 +266,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({ onClose }) => {
       console.log('🔑 Price ID sauvegardé:', stripeData.price.id);
       console.log('💾 Colonne stripe_price_id mise à jour avec succès');
       
+       // ÉTAPE 4: Définir ce prix comme prix par défaut du produit Stripe
+       console.log('🚀 ÉTAPE 4: Définition du prix comme prix par défaut...');
+       try {
+         const defaultPriceFormData = new URLSearchParams({
+           default_price: stripeData.price.id,
+         });
+         
+         const defaultPriceResponse = await fetch(`https://api.stripe.com/v1/products/${stripeData.product.id}`, {
+           method: 'POST',
+           headers: {
+             'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+             'Content-Type': 'application/x-www-form-urlencoded',
+           },
+           body: defaultPriceFormData,
+         });
+         
+         const defaultPriceData = await defaultPriceResponse.json();
+         
+         if (!defaultPriceResponse.ok) {
+           console.warn('⚠️ Impossible de définir le prix par défaut (non-bloquant):', defaultPriceData.error?.message);
+         } else {
+           console.log('✅ ÉTAPE 4 terminée: Prix défini comme prix par défaut');
+           console.log('🎯 Default price ID:', defaultPriceData.default_price);
+         }
+       } catch (defaultPriceError) {
+         console.warn('⚠️ Erreur lors de la définition du prix par défaut (non-bloquant):', defaultPriceError);
+       }
+       
       console.log('✅ Product created successfully');
       toast.success('Produit créé avec succès sur Stripe et Supabase !');
       console.log('🔄 ProductForm: Closing form after success');

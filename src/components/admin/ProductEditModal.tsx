@@ -464,6 +464,30 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       console.log('✅ SUCCÈS: Price ID mis à jour dans Supabase');
       console.log('🔑 Nouveau Price ID sauvegardé:', priceData.id);
       
+      // 6. Définir ce nouveau prix comme prix par défaut du produit Stripe
+      console.log('🎯 Définition du nouveau prix comme prix par défaut...');
+      const defaultPriceFormData = new URLSearchParams({
+        default_price: priceData.id,
+      });
+      
+      const defaultPriceResponse = await fetch(`https://api.stripe.com/v1/products/${existingProduct.id}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: defaultPriceFormData,
+      });
+      
+      const defaultPriceData = await defaultPriceResponse.json();
+      
+      if (!defaultPriceResponse.ok) {
+        console.warn('⚠️ Impossible de définir le prix par défaut (non-bloquant):', defaultPriceData.error?.message);
+      } else {
+        console.log('✅ Nouveau prix défini comme prix par défaut du produit Stripe');
+        console.log('🎯 Default price ID:', defaultPriceData.default_price);
+      }
+      
       // 5. Mettre à jour le formulaire local avec le nouveau Price ID
       setFormData(prev => ({ 
         ...prev, 
