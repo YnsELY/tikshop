@@ -343,6 +343,52 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       return;
     }
 
+    // Vérifier si le prix Stripe est actif avant de procéder au paiement
+    try {
+      console.log('🔍 Vérification de l\'état du prix Stripe:', stripeProduct.priceId);
+      
+      const priceCheckResponse = await fetch(`https://api.stripe.com/v1/prices/${stripeProduct.priceId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+        },
+      });
+      
+      const priceData = await priceCheckResponse.json();
+      
+      if (!priceCheckResponse.ok) {
+        console.error('❌ Erreur vérification prix Stripe:', priceData);
+        throw new Error(`Prix Stripe non trouvé: ${priceData.error?.message || 'Unknown error'}`);
+      }
+      
+      console.log('📋 État du prix Stripe:', {
+        id: priceData.id,
+        active: priceData.active,
+        unit_amount: priceData.unit_amount,
+        currency: priceData.currency
+      });
+      
+      if (!priceData.active) {
+        console.log('⚠️ Prix Stripe inactif détecté, création d\'un nouveau prix...');
+        
+        // Créer un nouveau prix actif
+        const newPriceId = await createNewActivePriceForProduct(product);
+        
+        if (newPriceId) {
+          // Mettre à jour le stripeProduct avec le nouveau Price ID
+          stripeProduct.priceId = newPriceId;
+          console.log('✅ Nouveau prix actif créé et utilisé:', newPriceId);
+        } else {
+          throw new Error('Impossible de créer un nouveau prix actif');
+        }
+      } else {
+        console.log('✅ Prix Stripe actif, procédure normale');
+      }
+    } catch (priceCheckError) {
+      console.error('❌ Erreur lors de la vérification du prix:', priceCheckError);
+      toast.error('Erreur de vérification du prix. Veuillez réessayer.');
+      return;
+    }
     try {
       console.log('🔄 Setting loading state to true');
       console.log('✅ All validations passed, creating checkout session...');
