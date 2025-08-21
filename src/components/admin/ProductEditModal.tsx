@@ -490,6 +490,25 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         stripe_price_id: priceData.id 
       }));
       
+      // CRITIQUE: Forcer la mise à jour du cache des produits
+      console.log('🔄 Forcing product cache refresh after Stripe update...');
+      
+      // Attendre un peu pour que Supabase soit à jour
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Forcer un rechargement complet des produits pour synchroniser le cache
+      try {
+        const { fetchAllProducts } = await import('../../store/productsStore');
+        // Réinitialiser le flag d'initialisation pour forcer un rechargement
+        const store = (await import('../../store/productsStore')).useProductsStore.getState();
+        store.setProducts([]);
+        store.hasInitialized = false;
+        await store.fetchAllProducts();
+        console.log('✅ Product cache forcefully refreshed');
+      } catch (cacheError) {
+        console.warn('⚠️ Could not refresh product cache:', cacheError);
+      }
+      
       return {
         product: updateData,
         price: priceData,
@@ -602,55 +621,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     }
   };
 
-  // Fonction pour créer le produit sur Stripe s'il n'existe pas
-  const createStripeProductFromSupabase = async (productData: any): Promise<any> => {
-    try {
-      console.log('📦 Création du produit sur Stripe:', productData.name);
-      
-      const formData = new URLSearchParams({
-        name: productData.name,
-        'metadata[reference]': productData.reference,
-        'metadata[category]': productData.category,
-        'metadata[supabase_id]': product.id,
-      });
-
-      if (productData.description && productData.description.trim() !== '') {
-        formData.append('description', productData.description);
-      }
-
-      if (productData.image_url) {
-        formData.append('images[]', productData.image_url);
-      }
-
-      console.log('📤 Création du produit Stripe...');
-      const productResponse = await fetch('https://api.stripe.com/v1/products', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
-      });
-
-      const productResponseData = await productResponse.json();
-
-      if (!productResponse.ok) {
-        throw new Error(`Erreur création produit Stripe: ${productResponseData.error?.message || 'Unknown error'}`);
-      }
-      
-      console.log('✅ Produit Stripe créé avec succès:', {
-        id: productResponseData.id,
-        name: productResponseData.name,
-        description: productResponseData.description,
-        images: productResponseData.images
-      });
-      
-      return productResponseData;
-    } catch (error) {
-      console.error('❌ Erreur création Stripe:', error);
-      throw error;
-    }
-  };
   const activeVariants = variants.filter(v => !v.toDelete);
   const variantsToDelete = variants.filter(v => v.toDelete);
 
@@ -693,8 +663,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b6b5a] focus:border-transparent transition-colors"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b6b5a] focus:border-transparent transition-colors"
               required
             >
@@ -707,10 +675,6 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Stripe Price ID
@@ -739,18 +703,16 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
             </p>
           )}
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleInputChange}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8b6b5a] focus:border-transparent transition-colors"
           />
         </div>

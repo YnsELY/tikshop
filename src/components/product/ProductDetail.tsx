@@ -74,9 +74,20 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       id: product.id
     });
     
+     console.log('🔍 DETAILED STRIPE COMPATIBILITY CHECK:');
+     console.log('📦 Product from cache:', {
+       id: product.id,
+       name: product.name,
+       reference: product.reference,
+       price: product.price,
+       stripe_price_id: product.stripe_price_id,
+       updated_at: product.updated_at
+     });
+     
     // 1. PRIORITÉ: Vérifier d'abord si le produit a un stripe_price_id (produits synchronisés)
     if (product.stripe_price_id) {
       console.log('✅ Product has stripe_price_id:', product.stripe_price_id);
+       console.log('💰 Using price from stripe_price_id:', product.price);
       return {
         id: product.reference,
         priceId: product.stripe_price_id,
