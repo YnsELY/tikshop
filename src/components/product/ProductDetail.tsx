@@ -336,18 +336,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       console.log('❌ Insufficient stock');
       toast.error(`Stock insuffisant. Maximum disponible: ${selectedVariant.stock}`);
       return;
-    }
-
-    if (!relayPoint) {
-      console.log('❌ No relay point selected');
-      toast.error('Veuillez sélectionner un point relais avant de payer');
-      return;
-    }
-
-    try {
-      console.log('🔄 Setting loading state to true');
-      console.log('✅ All validations passed, creating checkout session...');
-      console.log('💳 Using price ID:', stripeProduct.priceId);
       
       const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}&product_id=${product.id}&quantity=${quantity}`;
       const cancelUrl = window.location.href;
