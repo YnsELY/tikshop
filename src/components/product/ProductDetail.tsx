@@ -336,7 +336,9 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       console.log('❌ Insufficient stock');
       toast.error(`Stock insuffisant. Maximum disponible: ${selectedVariant.stock}`);
       return;
-      
+    }
+
+    try {
       const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}&product_id=${product.id}&quantity=${quantity}`;
       const cancelUrl = window.location.href;
 
