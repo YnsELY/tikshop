@@ -296,6 +296,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       return;
     }
 
+    try {
       const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = window.location.href;
       
