@@ -159,12 +159,26 @@ export const CheckoutForm: React.FC = () => {
       return;
     }
 
+    // Protection contre les appels multiples
+    if (isProcessing) {
+      console.log('⚠️ Payment already processing, ignoring duplicate call');
+      return;
+    }
+
+    setIsProcessing(true);
+    console.log('🔄 Multi-product checkout processing started');
 
     try {
+      console.log('🛒 Starting multi-product Stripe checkout...');
+      console.log('📦 Compatible items:', stripeCompatibleItems.length);
+      console.log('🚚 Relay point:', relayPoint?.name);
+      console.log('📧 Customer email:', formData.email);
+
       // Créer les line items pour Stripe
       const lineItems = stripeCompatibleItems.map(item => {
         // Vérifier d'abord si le produit a un stripe_price_id (produits synchronisés)
         if (item.product.stripe_price_id) {
+          console.log(`✅ Using stripe_price_id for ${item.product.name}: ${item.product.stripe_price_id}`);
           return {
             price: item.product.stripe_price_id,
             quantity: item.quantity,
@@ -183,6 +197,7 @@ export const CheckoutForm: React.FC = () => {
         }
         
         if (stripeProduct) {
+          console.log(`✅ Using static Stripe product for ${item.product.name}: ${stripeProduct.priceId}`);
           return {
             price: stripeProduct.priceId,
             quantity: item.quantity,
@@ -192,6 +207,7 @@ export const CheckoutForm: React.FC = () => {
         throw new Error(`Produit Stripe non trouvé: ${item.product.name}`);
       });
 
+      console.log('📦 Line items prepared:', lineItems);
       // Préparer les métadonnées pour le webhook
       const metadata = {
         cart_checkout: 'true',
@@ -219,8 +235,10 @@ export const CheckoutForm: React.FC = () => {
         relay_point_postal_code: relayPoint?.postalCode || '',
       };
 
+      console.log('📋 Metadata prepared for webhook');
 
       // Utiliser la nouvelle fonction du hook
+      console.log('🚀 Calling createMultiProductCheckoutSession...');
       await createMultiProductCheckoutSession({
         lineItems,
         mode: 'payment',
@@ -229,11 +247,13 @@ export const CheckoutForm: React.FC = () => {
         metadata
       });
 
+      console.log('✅ Checkout session creation completed');
 
     } catch (error) {
       console.error('❌ Stripe checkout failed:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors du paiement Stripe');
     } finally {
+      console.log('🔄 Resetting multi-product checkout processing state');
       setIsProcessing(false);
     }
   };

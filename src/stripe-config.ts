@@ -141,4 +141,3 @@ export const getShippingPrice = async (userId: string): Promise<number> => {
 };
 
 // Export de compatibilité pour l'ancien code
-export const SHIPPING_RATE_ID = SHIPPING_RATE_ID_FIRST;

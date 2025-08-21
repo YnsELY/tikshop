@@ -282,6 +282,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
     console.log('🚀 handleStripeCheckout called');
     
     if (isStripeLoading) {
+      console.log('⚠️ Stripe checkout already loading, ignoring duplicate call');
       return;
     }
     
@@ -296,9 +297,27 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
       return;
     }
 
+    if (!relayPoint) {
+      toast.error('Veuillez sélectionner un point relais avant de payer');
+      return;
+    }
+
+    if (!formData.first_name || !formData.last_name || !formData.email) {
+      toast.error('Veuillez remplir toutes les informations de livraison');
+      return;
+    }
+
+    console.log('🛒 Starting single product Stripe checkout...');
+    console.log('📦 Product:', stripeProduct.name);
+    console.log('💰 Price ID:', stripeProduct.priceId);
+    console.log('🚚 Relay point:', relayPoint?.name);
+    console.log('📧 Customer email:', formData.email);
     try {
       const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = window.location.href;
+      
+      console.log('🔗 Success URL:', successUrl);
+      console.log('🔗 Cancel URL:', cancelUrl);
       
       await createCheckoutSession({
         priceId: stripeProduct.priceId,
@@ -330,6 +349,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
           relay_point_postal_code: relayPoint?.postalCode || '',
         }
       });
+      
+      console.log('✅ Single product checkout session creation completed');
     } catch (error) {
       console.error('Stripe checkout error:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors du paiement Stripe');

@@ -121,7 +121,19 @@ export const useStripeCheckout = () => {
       const shippingRateId = params.shippingRateId || await getShippingRateId(user.id);
       console.log('🚚 Using shipping rate:', shippingRateId === 'shr_1RwnghLvKNaGPjzpHOhrxqlA' ? '6€' : '0€');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`, {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
+      console.log('📡 API URL:', apiUrl);
+      console.log('📤 Request payload:', {
+        price_id: params.priceId,
+        mode: params.mode,
+        success_url: params.successUrl,
+        cancel_url: params.cancelUrl,
+        quantity: params.quantity || 1,
+        shipping_rate_id: shippingRateId,
+        metadata: params.metadata || {},
+      });
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,6 +151,7 @@ export const useStripeCheckout = () => {
       });
 
       console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -156,21 +169,40 @@ export const useStripeCheckout = () => {
           throw new Error('Session expirée. Veuillez vous reconnecter.');
         } else if (response.status === 403) {
           throw new Error('Accès refusé. Vérifiez vos permissions.');
+        } else if (response.status === 500) {
+          throw new Error('Erreur serveur Stripe. Veuillez réessayer dans quelques instants.');
+        } else if (response.status === 404) {
+          throw new Error('Service de paiement non disponible. Contactez le support.');
         } else {
           throw new Error(errorData.error || `Erreur ${response.status}: Impossible de créer la session de paiement`);
         }
       }
 
       const responseData = await response.json();
+      console.log('📥 Response data:', responseData);
       const { url } = responseData;
       
       if (url) {
         console.log('🎯 Redirecting to Stripe...');
+        console.log('🔗 Stripe URL:', url);
         toast.success('Redirection vers Stripe...');
-        setIsLoading(false);
-        window.location.href = url;
+        
+        // Vérifier que l'URL est valide avant la redirection
+        try {
+          new URL(url);
+          setIsLoading(false);
+          
+          // Utiliser une redirection plus robuste
+          setTimeout(() => {
+            window.location.href = url;
+          }, 100);
+        } catch (urlError) {
+          console.error('❌ Invalid URL received from Stripe:', url);
+          throw new Error('URL de paiement invalide reçue');
+        }
       } else {
-        throw new Error('No checkout URL received');
+        console.error('❌ No URL in response:', responseData);
+        throw new Error('Aucune URL de paiement reçue du serveur');
       }
     } catch (error) {
       console.error('❌ Checkout error:', error);
@@ -213,6 +245,7 @@ export const useStripeCheckout = () => {
       };
       
       console.log('📤 Request body:', requestBody);
+      console.log('📡 API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -224,6 +257,7 @@ export const useStripeCheckout = () => {
       });
 
       console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -236,18 +270,44 @@ export const useStripeCheckout = () => {
           errorData = { error: errorText };
         }
         
-        throw new Error(errorData.error || `Erreur ${response.status}: ${errorText}`);
+        // Messages d'erreur plus spécifiques
+        if (response.status === 401) {
+          throw new Error('Session expirée. Veuillez vous reconnecter.');
+        } else if (response.status === 403) {
+          throw new Error('Accès refusé. Vérifiez vos permissions.');
+        } else if (response.status === 500) {
+          throw new Error('Erreur serveur Stripe. Veuillez réessayer dans quelques instants.');
+        } else if (response.status === 404) {
+          throw new Error('Service de paiement non disponible. Contactez le support.');
+        } else {
+          throw new Error(errorData.error || `Erreur ${response.status}: Impossible de créer la session de paiement`);
+        }
       }
 
       const responseData = await response.json();
+      console.log('📥 Multi-product response data:', responseData);
       
       if (responseData.url) {
         console.log('🎯 Redirecting to Stripe checkout...');
+        console.log('🔗 Stripe checkout URL:', responseData.url);
         toast.success('Redirection vers le paiement...');
-        setIsLoading(false);
-        window.location.href = responseData.url;
+        
+        // Vérifier que l'URL est valide avant la redirection
+        try {
+          new URL(responseData.url);
+          setIsLoading(false);
+          
+          // Utiliser une redirection plus robuste avec délai
+          setTimeout(() => {
+            window.location.href = responseData.url;
+          }, 100);
+        } catch (urlError) {
+          console.error('❌ Invalid checkout URL received:', responseData.url);
+          throw new Error('URL de checkout invalide reçue');
+        }
       } else {
-        throw new Error('URL de checkout manquante');
+        console.error('❌ No URL in multi-product response:', responseData);
+        throw new Error('Aucune URL de checkout reçue du serveur');
       }
     } catch (error) {
       console.error('❌ Multi-product checkout error:', error);

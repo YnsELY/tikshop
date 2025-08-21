@@ -23,17 +23,30 @@ export const StripeProductCard: React.FC<StripeProductCardProps> = ({ product })
       return;
     }
 
+    console.log('🛒 Starting Stripe product card purchase...');
+    console.log('📦 Product:', product.name);
+    console.log('💰 Price ID:', product.priceId);
+
     try {
       const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = `${window.location.origin}/products`;
+
+      console.log('🔗 Success URL:', successUrl);
+      console.log('🔗 Cancel URL:', cancelUrl);
 
       await createCheckoutSession({
         priceId: product.priceId,
         mode: product.mode,
         successUrl,
         cancelUrl,
-        shippingRateId: SHIPPING_RATE_ID,
+        metadata: {
+          product_id: product.id,
+          product_name: product.name,
+          source: 'product_card'
+        }
       });
+      
+      console.log('✅ Product card checkout session creation completed');
     } catch (error) {
       console.error('Purchase error:', error);
       toast.error('Erreur lors de l\'achat. Veuillez réessayer.');
