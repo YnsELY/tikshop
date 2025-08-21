@@ -360,6 +360,23 @@ export const useProductsStore = create<ProductsState>()(
           const { updateProduct } = get();
           updateProduct(finalProduct);
           
+          // CRITIQUE: Forcer la mise à jour du cache local avec le nouveau stripe_price_id
+          console.log('🔄 Forcing local cache update with new stripe_price_id...');
+          console.log('🔑 Old stripe_price_id:', get().products.find(p => p.id === productId)?.stripe_price_id);
+          console.log('🔑 New stripe_price_id:', finalProduct.stripe_price_id);
+          
+          // Mettre à jour immédiatement le produit dans le cache local
+          set(state => ({
+            ...state,
+            products: state.products.map(p => 
+              p.id === productId 
+                ? { ...p, ...finalProduct, stripe_price_id: finalProduct.stripe_price_id }
+                : p
+            )
+          }));
+          
+          console.log('✅ Local cache updated with new stripe_price_id');
+          
           return finalProduct;
           
         } catch (err) {
