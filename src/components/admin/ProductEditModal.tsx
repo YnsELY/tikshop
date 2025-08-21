@@ -374,36 +374,60 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
       
       console.log('💰 Création d\'un nouveau prix sur Stripe (obligatoire lors de la modification)...');
         
-      // ÉTAPE 3A: Archiver l'ancien prix s'il existe
-      if (product.stripe_price_id) {
-        console.log('📦 Archivage de l\'ancien prix Stripe:', product.stripe_price_id);
+      // ÉTAPE 3A: Récupérer et archiver TOUS les anciens prix du produit
+      console.log('📦 Récupération de tous les prix existants pour le produit Stripe...');
+      
+      try {
+        // Récupérer tous les prix du produit
+        const pricesResponse = await fetch(`https://api.stripe.com/v1/prices?product=${existingProduct.id}&limit=100`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+          },
+        });
         
-        try {
-          const archiveResponse = await fetch(`https://api.stripe.com/v1/prices/${product.stripe_price_id}`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              active: 'false'
-            }),
-          });
+        const pricesData = await pricesResponse.json();
+        
+        if (pricesResponse.ok && pricesData.data) {
+          console.log(`📋 ${pricesData.data.length} prix trouvés pour ce produit`);
           
-          const archiveData = await archiveResponse.json();
+          // Archiver tous les prix actifs
+          const activePrices = pricesData.data.filter((price: any) => price.active);
+          console.log(`📦 ${activePrices.length} prix actifs à archiver`);
           
-          if (archiveResponse.ok) {
-            console.log('✅ Ancien prix archivé avec succès:', {
-              id: archiveData.id,
-              active: archiveData.active,
-              unit_amount: archiveData.unit_amount
-            });
-          } else {
-            console.warn('⚠️ Impossible d\'archiver l\'ancien prix (non-bloquant):', archiveData.error?.message);
+          for (const price of activePrices) {
+            try {
+              console.log(`📦 Archivage du prix: ${price.id} (${(price.unit_amount / 100).toFixed(2)}€)`);
+              
+              const archiveResponse = await fetch(`https://api.stripe.com/v1/prices/${price.id}`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                  active: 'false'
+                }),
+              });
+              
+              const archiveData = await archiveResponse.json();
+              
+              if (archiveResponse.ok) {
+                console.log(`✅ Prix ${price.id} archivé avec succès`);
+              } else {
+                console.warn(`⚠️ Impossible d'archiver le prix ${price.id}:`, archiveData.error?.message);
+              }
+            } catch (archiveError) {
+              console.warn(`⚠️ Erreur lors de l'archivage du prix ${price.id}:`, archiveError);
+            }
           }
-        } catch (archiveError) {
-          console.warn('⚠️ Erreur lors de l\'archivage de l\'ancien prix (non-bloquant):', archiveError);
+          
+          console.log('✅ Archivage de tous les anciens prix terminé');
+        } else {
+          console.warn('⚠️ Impossible de récupérer les prix existants (non-bloquant):', pricesData.error?.message);
         }
+      } catch (pricesError) {
+        console.warn('⚠️ Erreur lors de la récupération des prix existants (non-bloquant):', pricesError);
       }
         
       // ÉTAPE 3B: Créer le nouveau prix (actif par défaut)
