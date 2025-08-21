@@ -31,11 +31,7 @@ export const useStripeCheckout = () => {
   const getValidAccessToken = async (): Promise<string> => {
     console.log('🔐 Getting valid access token...');
     
-    // Attendre que la session soit prête
-    console.log('⏳ Waiting for session to be ready...');
-    await sessionWatchdog.waitForSession(15000); // Timeout de 15 secondes
-    
-    // Récupérer la session actuelle
+    // Récupérer la session actuelle et la rafraîchir si nécessaire
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
@@ -45,7 +41,17 @@ export const useStripeCheckout = () => {
     
     if (!session?.access_token) {
       console.error('❌ No access token in session');
-      throw new Error('Session manquante. Veuillez vous reconnecter.');
+      // Essayer de rafraîchir la session
+      console.log('🔄 Attempting to refresh session...');
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError || !refreshData.session?.access_token) {
+        console.error('❌ Session refresh failed:', refreshError);
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
+      
+      console.log('✅ Session refreshed successfully');
+      return refreshData.session.access_token;
     }
     
     // Vérifier si le token est expiré
@@ -53,7 +59,8 @@ export const useStripeCheckout = () => {
       const tokenPayload = JSON.parse(atob(session.access_token.split('.')[1]));
       const now = Math.floor(Date.now() / 1000);
       
-      if (tokenPayload.exp && tokenPayload.exp < now) {
+      // Rafraîchir si le token expire dans les 5 prochaines minutes
+      if (tokenPayload.exp && (tokenPayload.exp - now) < 300) {
         console.log('🔄 Token expired, refreshing...');
         
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
