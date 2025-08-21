@@ -51,6 +51,9 @@ function App() {
     initialize();
     
     updateActivity();
+    
+    // Nettoyer la localisation sauvegardée au démarrage de l'app (optionnel)
+    // localStorage.removeItem('cocolive-last-location');
   }, [initialize, updateActivity]);
 
   return (
