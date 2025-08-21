@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { getProductByPriceId } from '../stripe-config';
 
@@ -31,6 +32,13 @@ export const useStripeSubscription = () => {
   }, [user]);
 
   const fetchSubscription = async () => {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured, using empty subscription data');
+      setSubscription(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
