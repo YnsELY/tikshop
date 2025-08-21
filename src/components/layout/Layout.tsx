@@ -1,4 +1,5 @@
 import React from 'react';
+import { usePageVisibility } from '../../hooks/usePageVisibility';
 import { Header } from './Header';
 
 interface LayoutProps {
@@ -6,6 +7,8 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  usePageVisibility(); // Utilise le hook pour la détection automatique
+
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <Header />

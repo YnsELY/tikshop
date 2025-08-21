@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { usePageVisibility } from './hooks/usePageVisibility';
 import { useSessionWatchdog } from './lib/sessionWatchdog';
 import { StripeProvider } from './components/stripe/StripeProvider';
 import { Layout } from './components/layout/Layout';
@@ -44,7 +43,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   const { initialize, updateActivity } = useAuthStore();
-  usePageVisibility(); // Utilise le hook pour la détection automatique
 
   useEffect(() => {
     console.log('🚀 App mounting, initializing auth...');
