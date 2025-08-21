@@ -49,42 +49,27 @@ export const useStripeCheckout = () => {
         hasMetadata: !!params.metadata
       });
 
-      // Vérifier d'abord la session utilisateur
-      console.log('📡 createCheckoutSession: About to get session...');
-      const { data: { session }, error: tokenError } = await supabase.auth.getSession();
-      console.log('📬 createCheckoutSession: Get session completed');
+      // Utiliser le sessionWatchdog pour une gestion robuste de la session
+      console.log('🔐 Checking session validity with watchdog...');
+      const sessionReady = await sessionWatchdog.waitForSession(15000); // 15 secondes timeout
       
-      if (tokenError) {
-        console.error('Token error:', tokenError);
-        console.log('🔄 Trying to refresh session...');
-        
-        // Essayer de rafraîchir la session
-        console.log('📡 createCheckoutSession: About to refresh session...');
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        console.log('📬 createCheckoutSession: Refresh session completed');
-        
-        if (refreshError || !refreshData.session) {
-          console.error('❌ Session refresh failed:', refreshError);
-          console.log('🔄 createCheckoutSession: Setting loading to false - session refresh failed');
-          setIsLoading(false);
-          throw new Error('Session expirée. Veuillez vous reconnecter.');
-        }
-        
-        console.log('✅ Session refreshed successfully');
-        const newToken = refreshData.session.access_token;
-        
-        return await makeStripeRequest(params, newToken);
-      }
-
-      if (!session?.access_token) {
-        console.error('No access token found');
-        console.log('🔄 createCheckoutSession: Setting loading to false - no access token');
+      if (!sessionReady) {
+        console.error('❌ Session not ready after timeout');
         setIsLoading(false);
-        throw new Error('Token d\'accès manquant. Veuillez vous reconnecter.');
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
       }
-
-      console.log('✅ Valid session found, making Stripe request...');
-      console.log('📡 createCheckoutSession: About to make Stripe request...');
+      
+      // Récupérer la session fraîche après validation
+      console.log('📡 Getting fresh session after validation...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.access_token) {
+        console.error('❌ Failed to get fresh session:', sessionError);
+        setIsLoading(false);
+        throw new Error('Impossible de récupérer la session. Veuillez vous reconnecter.');
+      }
+      
+      console.log('✅ Fresh session obtained, making Stripe request...');
       return await makeStripeRequest(params, session.access_token);
       
     } catch (error) {
@@ -110,6 +95,23 @@ export const useStripeCheckout = () => {
     try {
       console.log('📡 Making request to Stripe function...');
       console.log('🔑 Token preview:', accessToken.substring(0, 20) + '...');
+
+      // Vérifier que le token n'est pas expiré avant de l'utiliser
+      try {
+        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
+        const expiresAt = tokenPayload.exp;
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (expiresAt <= now) {
+          console.error('❌ Token is expired, forcing session refresh...');
+          setIsLoading(false);
+          throw new Error('Token expiré. Veuillez actualiser la page.');
+        }
+        
+        console.log('✅ Token is valid, expires in:', Math.floor((expiresAt - now) / 60), 'minutes');
+      } catch (tokenCheckError) {
+        console.warn('⚠️ Could not verify token expiry (non-blocking):', tokenCheckError);
+      }
 
       // Déterminer le shipping rate à utiliser
       console.log('📡 makeStripeRequest: About to get shipping rate...');
