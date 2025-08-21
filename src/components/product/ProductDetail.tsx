@@ -333,17 +333,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
     }
 
     if (quantity > selectedVariant.stock) {
-      console.log('❌ Insufficient stock');
-      toast.error(`Stock insuffisant. Maximum disponible: ${selectedVariant.stock}`);
-      return;
-    }
-
-    try {
-      const successUrl = `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}&product_id=${product.id}&quantity=${quantity}`;
-      const cancelUrl = window.location.href;
-
-      console.log('🔗 URLs:', { successUrl, cancelUrl });
-      
       await createCheckoutSession({
         priceId: stripeProduct.priceId,
         mode: stripeProduct.mode,
