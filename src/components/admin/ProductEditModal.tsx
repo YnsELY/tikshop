@@ -289,7 +289,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
     }
   };
 
-  // Fonction pour mettre à jour automatiquement le produit sur Stripe lors de la modification
+  // Fonction pour mettre à jour le produit et créer un nouveau prix sur Stripe
   const updateStripeProductAndPrice = async (productData: any, originalReference: string): Promise<any> => {
     try {
       console.log('📦 Mise à jour automatique du produit sur Stripe:', productData.name);
@@ -362,7 +362,7 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         images: updateData.images
       });
       
-      // 3. Vérifier si le prix a changé et créer un nouveau prix si nécessaire
+      // 3. TOUJOURS créer un nouveau prix et archiver l'ancien
       const currentPrice = parseFloat(formData.price);
       const originalPrice = product.price;
       
@@ -372,117 +372,109 @@ export const ProductEditModal: React.FC<ProductEditModalProps> = ({
         priceChanged: currentPrice !== originalPrice
       });
       
-      if (currentPrice !== originalPrice) {
-        console.log('💰 Prix modifié, création d\'un nouveau prix sur Stripe...');
+      console.log('💰 Création d\'un nouveau prix sur Stripe (obligatoire lors de la modification)...');
         
-        // ÉTAPE 3A: Archiver l'ancien prix s'il existe
-        if (product.stripe_price_id) {
-          console.log('📦 Archivage de l\'ancien prix Stripe:', product.stripe_price_id);
+      // ÉTAPE 3A: Archiver l'ancien prix s'il existe
+      if (product.stripe_price_id) {
+        console.log('📦 Archivage de l\'ancien prix Stripe:', product.stripe_price_id);
+        
+        try {
+          const archiveResponse = await fetch(`https://api.stripe.com/v1/prices/${product.stripe_price_id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              active: 'false'
+            }),
+          });
           
-          try {
-            const archiveResponse = await fetch(`https://api.stripe.com/v1/prices/${product.stripe_price_id}`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-              },
-              body: new URLSearchParams({
-                active: 'false'
-              }),
+          const archiveData = await archiveResponse.json();
+          
+          if (archiveResponse.ok) {
+            console.log('✅ Ancien prix archivé avec succès:', {
+              id: archiveData.id,
+              active: archiveData.active,
+              unit_amount: archiveData.unit_amount
             });
-            
-            const archiveData = await archiveResponse.json();
-            
-            if (archiveResponse.ok) {
-              console.log('✅ Ancien prix archivé avec succès:', {
-                id: archiveData.id,
-                active: archiveData.active,
-                unit_amount: archiveData.unit_amount
-              });
-            } else {
-              console.warn('⚠️ Impossible d\'archiver l\'ancien prix (non-bloquant):', archiveData.error?.message);
-            }
-          } catch (archiveError) {
-            console.warn('⚠️ Erreur lors de l\'archivage de l\'ancien prix (non-bloquant):', archiveError);
+          } else {
+            console.warn('⚠️ Impossible d\'archiver l\'ancien prix (non-bloquant):', archiveData.error?.message);
           }
+        } catch (archiveError) {
+          console.warn('⚠️ Erreur lors de l\'archivage de l\'ancien prix (non-bloquant):', archiveError);
         }
-        
-        // ÉTAPE 3B: Créer le nouveau prix (actif par défaut)
-        const priceAmount = Math.round(currentPrice * 100); // Convertir en centimes
-        console.log('💰 Nouveau prix en centimes:', priceAmount);
-        
-        const priceFormData = new URLSearchParams({
-          product: existingProduct.id,
-          unit_amount: priceAmount.toString(),
-          currency: 'eur',
-          active: 'true', // S'assurer que le nouveau prix est actif
-          'metadata[reference]': productData.reference,
-          'metadata[supabase_product_id]': product.id,
-        });
-        
-        console.log('📤 Création du nouveau prix Stripe (actif par défaut)...');
-        const priceResponse = await fetch('https://api.stripe.com/v1/prices', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: priceFormData,
-        });
-        
-        const priceData = await priceResponse.json();
-        
-        if (!priceResponse.ok) {
-          console.error('❌ Erreur création nouveau prix Stripe:', priceData);
-          throw new Error(`Erreur création prix Stripe: ${priceData.error?.message || 'Unknown error'}`);
-        }
-        
-        // 📋 AFFICHAGE DE LA RÉPONSE STRIPE PRIX
-        console.log('💰 === NOUVEAU PRIX STRIPE CRÉÉ ===');
-        console.log('🔗 Nouveau Price ID:', priceData.id);
-        console.log('💰 Montant:', (priceData.unit_amount / 100).toFixed(2), '€');
-        console.log('✅ Actif:', priceData.active);
-        console.log('📊 Objet complet Stripe Prix:', JSON.stringify(priceData, null, 2));
-        console.log('💰 === FIN NOUVEAU PRIX STRIPE ===');
-        
-        // 4. ÉTAPE CRITIQUE: Mettre à jour le Price ID dans Supabase
-        console.log('💾 Mise à jour du Price ID dans Supabase...');
-        console.log('🔑 Nouveau Price ID à sauvegarder:', priceData.id);
-        
-        const { error: updatePriceError } = await supabase
-          .from('products')
-          .update({ 
-            stripe_price_id: priceData.id,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', product.id);
-        
-        if (updatePriceError) {
-          console.error('❌ Erreur mise à jour Price ID:', updatePriceError);
-          throw new Error(`Erreur sauvegarde Price ID: ${updatePriceError.message}`);
-        }
-        
-        console.log('✅ SUCCÈS: Price ID mis à jour dans Supabase');
-        console.log('🔑 Nouveau Price ID sauvegardé:', priceData.id);
-        
-        // 5. Mettre à jour le formulaire local avec le nouveau Price ID
-        setFormData(prev => ({ 
-          ...prev, 
-          stripe_price_id: priceData.id 
-        }));
-        
-        return {
-          product: updateData,
-          price: priceData,
-          priceUpdated: true
-        };
-      } else {
-        console.log('💰 Prix inchangé, pas de nouveau prix à créer');
-        return {
-          product: updateData,
-          priceUpdated: false
-        };
       }
+        
+      // ÉTAPE 3B: Créer le nouveau prix (actif par défaut)
+      const priceAmount = Math.round(currentPrice * 100); // Convertir en centimes
+      console.log('💰 Nouveau prix en centimes:', priceAmount);
+      
+      const priceFormData = new URLSearchParams({
+        product: existingProduct.id,
+        unit_amount: priceAmount.toString(),
+        currency: 'eur',
+        active: 'true', // S'assurer que le nouveau prix est actif
+        'metadata[reference]': productData.reference,
+        'metadata[supabase_product_id]': product.id,
+      });
+      
+      console.log('📤 Création du nouveau prix Stripe (actif par défaut)...');
+      const priceResponse = await fetch('https://api.stripe.com/v1/prices', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: priceFormData,
+      });
+      
+      const priceData = await priceResponse.json();
+      
+      if (!priceResponse.ok) {
+        console.error('❌ Erreur création nouveau prix Stripe:', priceData);
+        throw new Error(`Erreur création prix Stripe: ${priceData.error?.message || 'Unknown error'}`);
+      }
+      
+      // 📋 AFFICHAGE DE LA RÉPONSE STRIPE PRIX
+      console.log('💰 === NOUVEAU PRIX STRIPE CRÉÉ ===');
+      console.log('🔗 Nouveau Price ID:', priceData.id);
+      console.log('💰 Montant:', (priceData.unit_amount / 100).toFixed(2), '€');
+      console.log('✅ Actif:', priceData.active);
+      console.log('📊 Objet complet Stripe Prix:', JSON.stringify(priceData, null, 2));
+      console.log('💰 === FIN NOUVEAU PRIX STRIPE ===');
+      
+      // 4. ÉTAPE CRITIQUE: Mettre à jour le Price ID dans Supabase
+      console.log('💾 Mise à jour du Price ID dans Supabase...');
+      console.log('🔑 Nouveau Price ID à sauvegarder:', priceData.id);
+      
+      const { error: updatePriceError } = await supabase
+        .from('products')
+        .update({ 
+          stripe_price_id: priceData.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', product.id);
+      
+      if (updatePriceError) {
+        console.error('❌ Erreur mise à jour Price ID:', updatePriceError);
+        throw new Error(`Erreur sauvegarde Price ID: ${updatePriceError.message}`);
+      }
+      
+      console.log('✅ SUCCÈS: Price ID mis à jour dans Supabase');
+      console.log('🔑 Nouveau Price ID sauvegardé:', priceData.id);
+      
+      // 5. Mettre à jour le formulaire local avec le nouveau Price ID
+      setFormData(prev => ({ 
+        ...prev, 
+        stripe_price_id: priceData.id 
+      }));
+      
+      return {
+        product: updateData,
+        price: priceData,
+        priceUpdated: true
+      };
     } catch (error) {
       console.error('❌ Erreur mise à jour Stripe:', error);
       throw error;
