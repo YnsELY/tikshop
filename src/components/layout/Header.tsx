@@ -47,15 +47,17 @@ export const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Bouton panier */}
-            <Link to="/cart" className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <ShoppingCart className="w-6 h-6 text-gray-700" />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#8b6b5a] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
+            {/* Bouton panier - visible seulement si connecté */}
+            {user && (
+              <Link to="/cart" className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <ShoppingCart className="w-6 h-6 text-gray-700" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#8b6b5a] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            )}
 
             {user ? (
               <Link to="/profile" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
