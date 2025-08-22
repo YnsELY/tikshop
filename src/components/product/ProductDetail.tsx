@@ -729,6 +729,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 Ajouter au panier
               </Button>
+              
+              <Button
+                onClick={() => navigate('/')}
+                variant="ghost"
+                size="lg"
+                className="flex-1"
+              >
+                Continuer mes achats
+              </Button>
             </div>
 
             {/* Bouton Acheter maintenant en pleine largeur */}
