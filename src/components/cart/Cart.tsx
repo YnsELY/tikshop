@@ -121,7 +121,7 @@ export const Cart: React.FC = () => {
                 <div className="mt-4">
                 <Link to="/">
                   <Button variant="outline" className="w-full">
-                    Continuer mes achats
+                    Rechercher un produit
                   </Button>
                 </Link>
                 </div>
