@@ -12,7 +12,7 @@ export const ProductSearch: React.FC = () => {
   const [reference, setReference] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
+  const [pendingProduct, setPendingProduct] = useState<{ id: string; reference: string } | null>(null);
   
   const { getProductByReference } = useProducts();
   const { user } = useAuthStore();
@@ -67,8 +67,8 @@ export const ProductSearch: React.FC = () => {
         // Vérifier si l'utilisateur est connecté
         if (!user) {
           console.log('🔐 Utilisateur non connecté, ouverture modal auth');
-          // Stocker l'ID du produit pour redirection après connexion
-          setPendingProductId(product.id);
+          // Stocker les infos du produit pour redirection après connexion
+          setPendingProduct({ id: product.id, reference: cleanRef });
           console.log('🔄 handleSearch: Setting loading to false before auth modal');
           setIsSearching(false);
           setShowAuthModal(true);
@@ -98,25 +98,41 @@ export const ProductSearch: React.FC = () => {
     console.log('🏁 Fin handleSearch');
   };
 
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = async () => {
     console.log('✅ Authentification réussie');
-    console.log('✅ PendingProductId:', pendingProductId);
+    console.log('✅ PendingProduct:', pendingProduct);
     setIsSearching(false); // IMPORTANT: Reset après auth
-    // Rediriger vers le produit après connexion réussie
-    if (pendingProductId) {
-      console.log('🎯 Redirection vers produit après auth:', pendingProductId);
-      navigate(`/products/${pendingProductId}`);
-      setPendingProductId(null);
+    
+    // Rechercher à nouveau le produit après connexion réussie
+    if (pendingProduct) {
+      console.log('🔍 Re-recherche du produit après auth:', pendingProduct.reference);
+      
+      try {
+        const product = await getProductByReference(pendingProduct.reference);
+        
+        if (product) {
+          console.log('🎯 Redirection vers produit après auth:', product.id);
+          navigate(`/products/${product.id}`);
+        } else {
+          console.log('❌ Produit non trouvé après auth');
+          toast.error(`Produit "${pendingProduct.reference}" non trouvé`);
+        }
+      } catch (error) {
+        console.error('❌ Erreur re-recherche après auth:', error);
+        toast.error('Erreur lors de la recherche du produit');
+      }
+      
+      setPendingProduct(null);
     }
     setShowAuthModal(false);
   };
 
   const handleAuthModalClose = () => {
     console.log('❌ Modal d\'authentification fermée');
-    console.log('❌ Reset isSearching et pendingProductId');
+    console.log('❌ Reset isSearching et pendingProduct');
     setIsSearching(false); // IMPORTANT: Reset à la fermeture
     setShowAuthModal(false);
-    setPendingProductId(null);
+    setPendingProduct(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
