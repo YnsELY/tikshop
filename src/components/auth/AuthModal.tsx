@@ -82,75 +82,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     resetForm();
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md">
-      <div className="text-center mb-6">
-        <div className="w-16 h-16 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center mx-auto mb-4">
-          <User className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
-        <p className="text-gray-600">{subtitle}</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {mode === 'register' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Prénom"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              icon={<User className="w-5 h-5 text-gray-400" />}
-              required
-            />
-            <Input
-              label="Nom"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              icon={<User className="w-5 h-5 text-gray-400" />}
-              required
-            />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-xl shadow-2xl max-h-[90vh] overflow-auto mx-4 max-w-md w-full">
+        <div className="p-6">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-[#8b6b5a] to-[#a0806f] rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
+            <p className="text-gray-600">{subtitle}</p>
           </div>
-        )}
 
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleInputChange}
-          icon={<Mail className="w-5 h-5 text-gray-400" />}
-          required
-        />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Prénom"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  icon={<User className="w-5 h-5 text-gray-400" />}
+                  required
+                />
+                <Input
+                  label="Nom"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  icon={<User className="w-5 h-5 text-gray-400" />}
+                  required
+                />
+              </div>
+            )}
 
-        <Input
-          label="Mot de passe"
-          name="password"
-          type="password"
-          value={formData.password}
-          onChange={handleInputChange}
-          icon={<Lock className="w-5 h-5 text-gray-400" />}
-          required
-        />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              icon={<Mail className="w-5 h-5 text-gray-400" />}
+              required
+            />
 
-        <Button type="submit" className="w-full" isLoading={isLoading}>
-          {mode === 'login' ? 'Se connecter' : "S'inscrire"}
-        </Button>
-      </form>
+            <Input
+              label="Mot de passe"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              icon={<Lock className="w-5 h-5 text-gray-400" />}
+              required
+            />
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
-          {mode === 'login' ? "Vous n'avez pas de compte ?" : 'Vous avez déjà un compte ?'}{' '}
-          <button
-            type="button"
-            onClick={switchMode}
-            className="text-primary-500 hover:text-primary-600 font-medium"
-          >
-            {mode === 'login' ? "S'inscrire" : 'Se connecter'}
-          </button>
-        </p>
+            <Button type="submit" className="w-full" isLoading={isLoading}>
+              {mode === 'login' ? 'Se connecter' : "S'inscrire"}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              {mode === 'login' ? "Vous n'avez pas de compte ?" : 'Vous avez déjà un compte ?'}{' '}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="text-[#8b6b5a] hover:text-[#755441] font-medium"
+              >
+                {mode === 'login' ? "S'inscrire" : 'Se connecter'}
+              </button>
+            </p>
+          </div>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 };
