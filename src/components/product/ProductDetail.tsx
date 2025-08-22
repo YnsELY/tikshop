@@ -732,7 +732,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
               
               <Button
                 onClick={() => navigate('/')}
-                variant="ghost"
+               variant="outline"
                 size="lg"
                 className="flex-1"
               >
