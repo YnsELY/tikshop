@@ -721,7 +721,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
               <Button
                 onClick={handleAddToCart}
-                variant="outline"
+               variant="outline"
                 size="lg"
                 disabled={!selectedVariant || selectedVariant.stock === 0}
               >
@@ -733,7 +733,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ productId: propPro
                 onClick={() => navigate('/')}
                className="flex-1 bg-[#8b6b5a] hover:bg-[#755441] text-white"
                 size="lg"
-                className="flex-1"
               >
                 Continuer mes achats
               </Button>
