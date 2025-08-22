@@ -242,8 +242,8 @@ export const CheckoutForm: React.FC = () => {
       await createMultiProductCheckoutSession({
         lineItems,
         mode: 'payment',
-        success_url: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: window.location.href,
+        successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: window.location.href,
         metadata
       });
 
