@@ -40,34 +40,31 @@ export const CheckoutForm: React.FC = () => {
   // Calculate Stripe compatibility
   const stripeCompatibleItems = React.useMemo(() => {
     console.log('🔍 Checking Stripe compatibility for cart items...');
-    console.log('📦 Cart items:', items.map(item => ({
-      name: item.product.name,
-      reference: item.product.reference,
-      id: item.product.id
-    })));
-    console.log('🎯 Available Stripe products:', stripeProducts.map(sp => ({
-      name: sp.name,
-      id: sp.id
-    })));
     
     const compatible = items.filter(item => {
-      // Essayer plusieurs méthodes de correspondance
-      const matchById = stripeProducts.some(sp => sp.id === item.product.id);
-      const matchByReference = stripeProducts.some(sp => sp.id === item.product.reference);
-      const matchByName = stripeProducts.some(sp => 
+      console.log(`🔍 Checking compatibility for: ${item.product.name}`);
+      console.log(`📦 Product stripe_price_id: ${item.product.stripe_price_id}`);
+
+      // PRIORITÉ 1: Vérifier si le produit a un stripe_price_id
+      if (item.product.stripe_price_id) {
+        console.log(`✅ Product has stripe_price_id: ${item.product.stripe_price_id}`);
+        return true;
+      }
+
+      // PRIORITÉ 2: Vérifier dans les produits Stripe statiques
+      const hasStaticMatch = stripeProducts.some(sp => 
+        sp.id === item.product.reference || 
+        sp.id === item.product.id ||
         sp.name.toLowerCase().trim() === item.product.name.toLowerCase().trim()
       );
       
-      const isCompatible = matchById || matchByReference || matchByName;
+      if (hasStaticMatch) {
+        console.log(`✅ Product found in static Stripe products`);
+        return true;
+      }
       
-      console.log(`🔍 Product "${item.product.name}" (ref: ${item.product.reference}, id: ${item.product.id}):`, {
-        matchById,
-        matchByReference,
-        matchByName,
-        isCompatible
-      });
-      
-      return isCompatible;
+      console.log(`❌ Product not compatible with Stripe`);
+      return false;
     });
     
     console.log('✅ Stripe compatible items found:', compatible.length, 'out of', items.length);
