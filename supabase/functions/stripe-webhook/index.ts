@@ -305,6 +305,8 @@ async function createOrderFromStripeSession(session: Stripe.Checkout.Session, cu
             // Traitement normal pour un seul produit
             let productId = null;
             let variantId = null;
+          console.log('Processing line items from session:', session.line_items.data.length);
+          
             // Try to find product by Stripe product metadata
             if (lineItem.price?.product && typeof lineItem.price.product === 'object') {
               const stripeProduct = lineItem.price.product as Stripe.Product;
@@ -320,6 +322,8 @@ async function createOrderFromStripeSession(session: Stripe.Checkout.Session, cu
                   .single();
                 
                 if (productData) {
+                  console.log('Creating order item for cart item:', cartItem);
+                  
                   productId = productData.id;
                 }
               }
@@ -332,7 +336,7 @@ async function createOrderFromStripeSession(session: Stripe.Checkout.Session, cu
 
             // If we found a product, create the order item
             if (productId) {
-              const { error: itemError } = await supabase
+                      price: cartItem.price || (lineItem.price?.unit_amount || 0) / 100, // Use cart item price or fallback
                 .from('order_items')
                 .insert({
                   order_id: order.id,
@@ -342,8 +346,8 @@ async function createOrderFromStripeSession(session: Stripe.Checkout.Session, cu
                   price: (lineItem.price?.unit_amount || 0) / 100, // Convert from cents
                 });
 
-              if (itemError) {
-                console.error('Failed to create order item:', itemError);
+                // Continue pour traiter tous les line items si nécessaire
+                console.log('Finished processing cart items from metadata');
               } else {
                 console.log('Order item created for product:', productId);
               }

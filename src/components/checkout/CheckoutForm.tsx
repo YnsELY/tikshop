@@ -213,6 +213,7 @@ export const CheckoutForm: React.FC = () => {
           product_reference: item.product.reference,
           variant_id: item.variant?.id || '',
           quantity: item.quantity,
+          price: item.product.price, // Ajouter le prix pour le webhook
         }))),
         total_items: stripeCompatibleItems.length.toString(),
         // Informations de livraison pour le webhook
