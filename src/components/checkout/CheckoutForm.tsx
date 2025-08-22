@@ -9,7 +9,7 @@ import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
 import { useOrders } from '../../hooks/useOrders';
 import { useStripeCheckout } from '../../hooks/useStripeCheckout';
-import { stripeProducts, getShippingPrice } from '../../stripe-config';
+import { stripeProducts, getShippingPrice, getShippingRateId } from '../../stripe-config';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -242,6 +242,7 @@ export const CheckoutForm: React.FC = () => {
         mode: 'payment',
         successUrl: `${window.location.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: window.location.href,
+        shippingRateId: await getShippingRateId(user.id),
         metadata
       });
 

@@ -246,6 +246,7 @@ export const useStripeCheckout = () => {
         mode: params.mode,
         success_url: params.successUrl,
         cancel_url: params.cancelUrl,
+        shipping_rate_id: params.shippingRateId,
         metadata: params.metadata || {}
       };
       
