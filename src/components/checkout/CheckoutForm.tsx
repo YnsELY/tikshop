@@ -443,50 +443,8 @@ export const CheckoutForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      toast.error('Veuillez vous connecter pour continuer');
-      return;
-    }
-
-    if (!relayPoint) {
-      toast.error('Veuillez sélectionner un point relais');
-      return;
-    }
-    
-    setIsProcessing(true);
-    try {
-      // Créer la commande sans paiement immédiat
-      const orderData = {
-        user_id: user.id,
-        total_amount: finalTotal,
-        status: 'pending',
-        shipping_address: formData,
-        relay_point: relayPoint,
-        payment_intent_id: null,
-        items: items.map(item => ({
-          product_id: item.product.id,
-          variant_id: item.variant?.id,
-          quantity: item.quantity,
-          price: item.product.price,
-        }))
-      };
-
-      await createOrder(orderData);
-      
-      // Clear cart
-      clearCart();
-      
-      // Arrêter le chronomètre
-      clearTimer();
-      
-      toast.success('Commande créée avec succès !');
-      navigate('/orders');
-    } catch (error) {
-      console.error('Order creation failed:', error);
-      toast.error('Erreur lors de la création de la commande. Veuillez réessayer.');
-    } finally {
-      setIsProcessing(false);
-    }
+    // Rediriger vers le paiement Stripe
+    await handlePlaceOrder();
   };
 
   if (items.length === 0) {
@@ -601,7 +559,7 @@ export const CheckoutForm: React.FC = () => {
               {/* Bouton de paiement Stripe */}
               {hasStripeItems && (
                 <Button
-                  onClick={handlePlaceOrder}
+                  type="submit"
                   className="w-full bg-[#635bff] hover:bg-[#5a54e6] text-white shadow-lg hover:shadow-xl"
                   disabled={!relayPoint || isProcessing}
                   isLoading={isProcessing}
