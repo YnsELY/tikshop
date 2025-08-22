@@ -196,6 +196,11 @@ export const useStripeCheckout = () => {
           setTimeout(() => {
             window.location.href = url;
           }, 100);
+          
+          // Ouvrir dans un nouvel onglet au lieu de rediriger
+          setTimeout(() => {
+            window.open(url, '_blank');
+          }, 100);
         } catch (urlError) {
           console.error('❌ Invalid URL received from Stripe:', url);
           throw new Error('URL de paiement invalide reçue');
@@ -300,6 +305,11 @@ export const useStripeCheckout = () => {
           // Utiliser une redirection plus robuste avec délai
           setTimeout(() => {
             window.location.href = responseData.url;
+          }, 100);
+          
+          // Ouvrir dans un nouvel onglet au lieu de rediriger
+          setTimeout(() => {
+            window.open(responseData.url, '_blank');
           }, 100);
         } catch (urlError) {
           console.error('❌ Invalid checkout URL received:', responseData.url);
