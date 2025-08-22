@@ -72,8 +72,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setFormData({
       email: '',
       password: '',
-      firstName: '',
-      lastName: '',
     });
   };
 
@@ -101,27 +99,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Prénom"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  icon={<User className="w-5 h-5 text-gray-400" />}
-                  required
-                />
-                <Input
-                  label="Nom"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  icon={<User className="w-5 h-5 text-gray-400" />}
-                  required
-                />
-              </div>
-            )}
-
             <Input
               label="Email"
               name="email"
