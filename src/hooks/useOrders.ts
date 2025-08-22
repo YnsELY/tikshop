@@ -83,7 +83,10 @@ export const useOrders = () => {
       if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
         setError('Impossible de se connecter à la base de données. Vérifiez votre configuration Supabase.');
       } else {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+        // Ne pas afficher l'erreur "Operation already in progress" à l'utilisateur
+        if (!(err instanceof Error && err.message === 'Operation already in progress')) {
+          setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+        }
       }
       // Set empty orders on error
       setOrders([]);
@@ -186,7 +189,10 @@ export const useOrders = () => {
       if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
         setError('Impossible de se connecter à la base de données. Vérifiez votre configuration Supabase.');
       } else {
-        setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la récupération des commandes');
+        // Ne pas afficher l'erreur "Operation already in progress" à l'utilisateur
+        if (!(err instanceof Error && err.message === 'Operation already in progress')) {
+          setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la récupération des commandes');
+        }
       }
       // Set empty orders on error
       setAllOrders([]);

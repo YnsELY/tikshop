@@ -20,7 +20,7 @@ export const CheckoutForm: React.FC = () => {
   const { items, getTotalPrice, clearCart, clearTimer } = useCartStore();
   const { user } = useAuthStore();
   const { createOrder } = useOrders();
-  const { createCheckoutSession, isLoading: isStripeLoading } = useStripeCheckout();
+  const { createCheckoutSession, createMultiProductCheckoutSession, isLoading: isStripeLoading } = useStripeCheckout();
   const [isProcessing, setIsProcessing] = useState(false);
   const [shippingPrice, setShippingPrice] = useState<number>(6); // Prix par défaut
 
